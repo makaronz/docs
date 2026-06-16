@@ -16,6 +16,15 @@
           "index",
           "quickstart"
         ]
+      },
+      {
+        "group": "Operator guide",
+        "pages": [
+          "studio/overview",
+          "studio/overlay-editor",
+          "studio/on-air-mode",
+          "studio/simulcast"
+        ]
       }
     ],
     "global": {

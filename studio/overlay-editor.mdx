@@ -1,0 +1,74 @@
+---
+title: "Overlay editor"
+description: "Add, position, and style on-stream overlays from the Studio canvas"
+---
+
+The overlay editor lives in the center column of Studio. It renders a 1920 × 1080 canvas over the video preview; everything you place here is what viewers see on the stream.
+
+## Overlay types
+
+Pick a preset from the **Graphics** library on the right, then tweak it in the inspector. The supported types are:
+
+| Type | Use it for |
+| --- | --- |
+| `logo` | A persistent brand mark in a corner. |
+| `text` | Lower thirds, name plates, callouts. |
+| `ticker` | Scrolling headline along the bottom edge. |
+| `countdown` | "Starts in 14:32" timers; auto-renders `Expired` after `endsAt`. |
+| `social` | A short quote or social post. |
+| `frame` | A full-canvas brand border. |
+| `icon` | A small badge (for example, a pulsing `LIVE` dot). |
+| `image` | An uploaded PNG / JPG / SVG / WebP / GIF (max 2 MB). |
+| `product` | A product card with price, stock, and a CTA. See below. |
+
+## Product card overlay
+
+Use the product card when you want viewers to see the item that is currently being sold or demoed on stream — for example, during a shopping segment.
+
+Pick **Karta produktu** from the Graphics library to drop a preset, then fill in the product fields in the inspector:
+
+| Field | Notes |
+| --- | --- |
+| Product name | Bold title at the top of the card. Falls back to the overlay's `content` if empty. |
+| Price | Preformatted string — the panel never formats currency, so include the symbol yourself (for example `199 zł`, `$24.99`). |
+| Compare-at price | Rendered struck-through next to the price. Omit to hide. |
+| Stock | Remaining units. A positive number renders a `zostało N szt.` chip. `0` switches the CTA to a disabled **Wyprzedane** state. Leave empty to hide the chip entirely. |
+| CTA label | Text on the action button. Defaults to **Dodaj do koszyka** when blank. |
+
+### How it renders to viewers
+
+The card has fixed light "paper" chrome — it ignores the editable background color and the panel's On-Air dark theme on purpose, so it stays legible against any video. It always shows:
+
+- The product name (truncated to one line).
+- Price in the brand green, with the compare-at price struck through next to it.
+- A stock chip when stock is greater than zero.
+- A full-width CTA button — green when in stock, gray and aria-disabled when stock is `0`.
+
+<Tip>
+  Position the card on the lower-left or lower-right third of the canvas so it doesn't collide with the ticker or chat overlay on the viewer side.
+</Tip>
+
+## Default canvas
+
+A new Studio session starts with a single overlay on the canvas — the LIVECOMM logo preset. Add the rest from the Graphics library as you need them, so you only carry the overlays you actually want on stream.
+
+If you want to wipe your changes, click **Reset** in the overlay toolbar to return to the single-overlay default.
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| `Arrow keys` | Nudge the selected overlay by 10 px. Hold `Shift` for 1 px. |
+| `Delete` / `Backspace` | Remove the selected overlay. |
+
+The Delete / Backspace shortcut is suppressed while you are typing in any input, textarea, select, contenteditable element, or `role="textbox"` — so renaming an overlay label never deletes it by accident. The shortcut also ignores `Cmd`, `Ctrl`, and `Alt` modifiers.
+
+## Save and load
+
+Overlay layouts persist to the browser's `localStorage` under `livecomm.overlay-demo.v1`. Use the toolbar to:
+
+- **Save** — write the current layout to storage.
+- **Load** — restore the last saved layout.
+- **Reset** — drop back to the single-overlay default.
+
+Because layouts live in the browser, they are per-device. Save again on each operator workstation you use.
