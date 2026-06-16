@@ -1,0 +1,68 @@
+---
+title: "Symultaniczna transmisja tab"
+description: "OBS ingest credentials and the iframe embed snippet for the stream"
+---
+
+The **Symultaniczna transmisja** tab in the event editor groups everything you need to push video into the stream and embed the player on a client's site. Two cards are described here:
+
+- **Adres nadawania (OBS)** — the Cloudflare Stream RTMPS ingest for your encoder.
+- **Kopiuj kod embed** — the ready-to-paste `<iframe>` snippet for the client.
+
+## Adres nadawania (OBS)
+
+This card surfaces the stream's Cloudflare Stream ingest endpoint so you can configure OBS without opening the Cloudflare dashboard. It only appears for streams provisioned on Cloudflare Stream; older IVS streams render a short informational note instead.
+
+The card shows two read-only fields:
+
+- **Server** — the RTMPS ingest URL (for example, `rtmps://live.cloudflare.com:443/live/`).
+- **Stream Key** — masked by default. Click the eye icon to reveal it, and the copy icon to put it on the clipboard.
+
+### Configure OBS
+
+<Steps>
+  <Step title="Open OBS settings">
+    Go to **Settings → Stream**.
+  </Step>
+  <Step title="Pick the right service">
+    Set **Service** to `Custom` and leave **Use authentication** unchecked.
+  </Step>
+  <Step title="Paste the Server and Stream Key">
+    Copy each value from the **Adres nadawania (OBS)** card and paste it into the matching OBS field. The stream key stays masked in OBS too.
+  </Step>
+  <Step title="Start streaming">
+    Click **Start Streaming** in OBS. Studio flips to On-Air automatically once Cloudflare reports the stream as live.
+  </Step>
+</Steps>
+
+<Warning>
+  Treat the stream key like a password. Anyone with the key can publish video to this stream. Reveal it only on a trusted device, and rotate the stream if you suspect it leaked.
+</Warning>
+
+## Kopiuj kod embed
+
+The **Kod do osadzenia na stronie** card generates the `<iframe>` snippet the client drops into their site. The iframe points at the worker's public embed page (`/e/:streamId`), which serves the player with overlays already wired in.
+
+Click **Kopiuj** (copy icon) to copy the snippet — it stays selectable in the textarea if the clipboard API is unavailable (for example, on an insecure context).
+
+### What the snippet looks like
+
+The default snippet is a single line wrapped in a responsive 16:9 container, so it scales with the parent column:
+
+```html
+<div style="position:relative;width:100%;aspect-ratio:16/9">
+  <iframe
+    src="https://api.example.com/e/STREAM_ID"
+    title="LIVECOMM player"
+    frameborder="0"
+    allow="autoplay; fullscreen; picture-in-picture"
+    allowfullscreen
+    style="position:absolute;inset:0;width:100%;height:100%"
+  ></iframe>
+</div>
+```
+
+If you pass explicit `width` and `height` (for example, from a custom integration that calls `buildEmbedSnippet`), the responsive wrapper is dropped and the iframe renders at the fixed pixel size you asked for.
+
+<Tip>
+  The embed page is framable from any origin by design — share the snippet directly with the client and they can paste it into their CMS without extra CORS or sandbox configuration.
+</Tip>

@@ -1,0 +1,29 @@
+---
+title: "On-Air mode"
+description: "Dark Studio theme that follows the stream's live state, with a manual override"
+---
+
+On-Air mode is a dark theme for Studio that lowers ambient light from the panel while you are broadcasting. It keeps the operator's eyes on the video preview instead of the surrounding chrome.
+
+## How it switches
+
+Studio reads the bound stream's status from the API:
+
+- When the stream goes **live**, Studio automatically switches to the On-Air (dark) theme.
+- When the stream stops, it switches back to the default light theme.
+- A short (~250 ms) color transition softens the switch so it doesn't flash.
+
+The live duration timer next to the toggle starts counting from the API's `started_at` timestamp when available, or from the moment the client first sees the stream as live.
+
+## Manual toggle
+
+The **On-Air** button in the top-center toolbar (moon icon) lets you override the automatic behavior:
+
+- Click it to force On-Air on or off regardless of the stream status — useful for a tech rehearsal or to dim the panel during setup.
+- As soon as your manual choice matches what the automatic behavior would pick (for example, you toggle off while the stream is also offline), Studio drops the override and resumes following the stream status.
+
+The button exposes `aria-pressed` so screen readers announce the current state.
+
+<Tip>
+  If you're rehearsing, switch the toggle on manually to preview how your overlays look against the dark chrome — the product-card overlay keeps its own light chrome and will look the same to viewers either way.
+</Tip>
