@@ -1,0 +1,172 @@
+---
+title: "Player embed"
+description: "Embed the LIVECOMM player on a third-party site using either the iframe snippet or the <livecomm-player> web component."
+---
+
+The LIVECOMM player can be embedded on any third-party page in two ways:
+
+- **Iframe snippet** — the simplest integration. Drop one `<iframe>` on the page; the API worker serves a fully wired playback page at `/e/:streamId`.
+- **Web component** — embed `<livecomm-player>` directly when you need control over layout, theming, or token refresh.
+
+Both options use the same underlying bundle (`livecomm-player.min.js`) and the public `player-config` API.
+
+## When to use each option
+
+| Use case | Recommended option |
+|----------|--------------------|
+| Marketing site, client demo, blog post | Iframe snippet |
+| App that already manages auth and re-fetches tokens | Web component |
+| Custom layout (overlays outside the player frame, custom controls) | Web component |
+| Private deployment without access to public CDNs | Iframe snippet (self-hosted bundle) or web component loaded from your CDN |
+
+## Iframe embed
+
+The API worker exposes `GET /e/:streamId` — a public, framable playback page that loads the player bundle, fetches `player-config` from the same origin, and starts playback. The page sets no `X-Frame-Options`, so it can be embedded anywhere.
+
+### Generate the snippet
+
+Use `buildEmbedSnippet` from `@livecomm/shared` (the operator panel uses the same helper behind its **Copy embed code** button):
+
+```ts
+import { buildEmbedSnippet } from '@livecomm/shared';
+
+const snippet = buildEmbedSnippet({
+  embedBaseUrl: 'https://api.example.com', // origin of the API worker
+  streamId: '5f2c…-uuid',
+  // Optional — omit for a responsive 16:9 wrapper:
+  width: 640,
+  height: 360,
+  title: 'My live stream',
+});
+```
+
+With fixed dimensions the helper returns a bare `<iframe>`:
+
+```html
+<iframe
+  src="https://api.example.com/e/5f2c…-uuid"
+  title="My live stream"
+  frameborder="0"
+  allow="autoplay; fullscreen; picture-in-picture"
+  allowfullscreen
+  width="640"
+  height="360"
+></iframe>
+```
+
+Without `width` and `height` the snippet is wrapped in a responsive 16:9 container that fills its parent.
+
+### Self-hosted player bundle
+
+`/e/:streamId` loads the player bundle from same-origin `/e/player.js`, which the API worker self-hosts. The bundle is rebuilt on every deploy and inlined into the worker, so private deployments never need jsDelivr or any other public CDN.
+
+To point the embed page at a different bundle (for example, your own CDN), set `PLAYER_BUNDLE_URL` on the worker. Otherwise the default same-origin path is used.
+
+## Web component
+
+The `<livecomm-player>` custom element is the building block both for the iframe page and for direct integrations. It detects the playback adapter from the manifest URL and renders a 16:9 video surface plus overlays.
+
+### Load the bundle
+
+Load `livecomm-player.min.js` once per page — from your worker's `/e/player.js` or any other host you control:
+
+```html
+<script defer src="https://api.example.com/e/player.js"></script>
+```
+
+### Render the element
+
+```html
+<livecomm-player
+  playback-url="https://…/index.m3u8"
+  token="eyJhbGciOi…"
+></livecomm-player>
+```
+
+The embedding page is responsible for fetching `GET /api/public/streams/<stream-id>/player-config` (no auth, public CORS) and passing the returned `playbackUrl` and `token` to the element.
+
+### Attributes
+
+| Attribute | Required | Description |
+|-----------|----------|-------------|
+| `playback-url` | Yes | HLS, IVS, or Cloudflare Stream manifest URL from `player-config`. |
+| `playbackurl` | — | Alias of `playback-url`. `playback-url` is the canonical form. |
+| `token` | Conditional | Time-limited playback JWT. Required for private/authorized channels and for IVS playback. |
+| `provider` | No | Overrides adapter detection. One of `auto` (default), `ivs`, `hls`, `cloudflareStream`. Leave as `auto` unless you know the source type. |
+
+The element renders as a block with a fixed 16:9 aspect ratio. Size it with CSS on the host (for example, `livecomm-player { width: 100%; }`). Autoplay, mute, and controls follow the underlying `<video>` behavior of the chosen adapter.
+
+### Token refresh
+
+Playback tokens are short-lived (1 hour). The component does **not** refresh them itself. The embedding page should re-fetch `player-config` and update the `token` attribute (or property) before `tokenExpiresAt`.
+
+```ts
+const cfg = await fetch(`/api/public/streams/${streamId}/player-config`).then((r) => r.json());
+player.setAttribute('playback-url', cfg.playbackUrl);
+player.setAttribute('token', cfg.token);
+
+// Schedule a refresh before the token expires.
+const msUntilRefresh = new Date(cfg.tokenExpiresAt).getTime() - Date.now() - 60_000;
+setTimeout(refresh, msUntilRefresh);
+```
+
+### Overlays
+
+Pass commerce overlays (product cards, banners, chips, CTAs) via the `setOverlays` method:
+
+```ts
+const player = document.querySelector('livecomm-player');
+player.setOverlays(cfg.overlays);
+```
+
+Overlays render on top of the video in a 9:16 canvas with staggered entrance animations.
+
+## Theming with CSS custom properties
+
+Both the player chrome and the overlays expose `--livecomm-*` custom properties. Set them on the host (or any ancestor) to white-label the player without forking the bundle.
+
+### Player chrome
+
+| Token | Default | Controls |
+|-------|---------|----------|
+| `--livecomm-bg` | `#0d0d0c` | Player background. |
+| `--livecomm-radius` | `8px` | Border radius of the player and its inner status card. |
+| `--livecomm-status-text` | `#b6b4ac` | Idle/error message text color and focus outline. |
+| `--livecomm-font-mono` | `'JetBrains Mono', ui-monospace, monospace` | Status message font. |
+| `--livecomm-accent` | `#2f5d3a` | Primary accent (retry button, product CTA, price). |
+| `--livecomm-on-accent` | `#f4f3ee` | Foreground color on `--livecomm-accent` surfaces. |
+
+### Overlays
+
+| Token | Default | Controls |
+|-------|---------|----------|
+| `--livecomm-font` | `'DM Sans', system-ui, sans-serif` | Overlay text font. |
+| `--livecomm-overlay-bg` | `rgba(25, 25, 23, 0.92)` | Background of banner, chip, and CTA overlays. |
+| `--livecomm-overlay-text` | `#f4f3ee` | Text color of banner, chip, and CTA overlays. |
+| `--livecomm-overlay-border` | `rgba(244, 243, 238, 0.22)` | Border color of banner, chip, and CTA overlays. |
+| `--livecomm-product-bg` | `#f4f3ee` | Product card background. |
+| `--livecomm-product-text` | `#1a1a1a` | Product card text color. |
+| `--livecomm-product-border` | `rgba(26, 26, 26, 0.14)` | Product card border. |
+| `--livecomm-product-muted` | `rgba(107, 107, 107, 0.4)` | Disabled CTA background on the product card. |
+
+Example — drop into your site's stylesheet:
+
+```css
+livecomm-player {
+  --livecomm-bg: #111;
+  --livecomm-radius: 12px;
+  --livecomm-accent: #ff4d6d;
+  --livecomm-on-accent: #fff;
+  --livecomm-overlay-bg: rgba(0, 0, 0, 0.8);
+}
+```
+
+## Troubleshooting
+
+| Problem | Likely cause |
+|---------|--------------|
+| Blank player, no video | Stream not live or `playback-url` is empty. |
+| "Stream not found" inside the iframe | Wrong `streamId` or stream deleted. |
+| CORS error from `player-config` | API CORS not configured for the embedding origin. |
+| Playback stalls after about an hour | Token expired and the page did not refresh it. |
+| No overlays rendered | No active overlays configured for the stream, or `setOverlays` was never called. |
